@@ -1,5 +1,5 @@
-[lab]
+[staging]
 ansible-target1 ansible_host=192.168.103.11 ansible_user=vagrant ansible_ssh_private_key_file=/home/vagrant/.ssh/ansible-new_rsa
 
-[owncloud]
+[prod]
 ansible-target2 ansible_host=192.168.103.12 ansible_user=vagrant ansible_ssh_private_key_file=/home/vagrant/.ssh/ansible-new_rsa

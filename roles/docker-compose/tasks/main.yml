@@ -1,0 +1,49 @@
+---
+- name: Determinar arquitetura do sistema para Docker Compose
+  ansible.builtin.set_fact:
+    docker_compose_arch: "{{ ansible_architecture }}"
+    docker_compose_kernel: "{{ ansible_kernel }}"
+
+- name: Corrigir mapeamento de arquitetura para Docker Compose (ex: aarch64 -> arm64)
+  ansible.builtin.set_fact:
+    docker_compose_arch_mapped: "{{ 'arm64' if docker_compose_arch == 'aarch64' else docker_compose_arch }}"
+
+- name: Verificar se o Docker Compose já está instalado
+  ansible.builtin.stat:
+    path: "{{ docker_compose_path }}"
+  register: docker_compose_stat
+
+- name: Instalar Docker Compose
+  ansible.builtin.get_url:
+    url: "{{ docker_compose_download_url_base }}/{{ docker_compose_version }}/docker-compose-{{ docker_compose_kernel }}-{{ docker_compose_arch_mapped }}"
+    dest: "{{ docker_compose_path }}"
+    mode: '0755'
+  when: not docker_compose_stat.stat.exists or (docker_compose_stat.stat.exists and "docker_compose_version_check.stdout is not defined or docker_compose_version not in docker_compose_version_check.stdout") # Simplificado, idealmente checar a versão
+  # Uma checagem de versão mais robusta:
+  # 1. Rodar `docker-compose --version` e registrar
+  # 2. Comparar com `docker_compose_version`
+
+- name: Verificar a versão do Docker Compose (opcional, para validação)
+  ansible.builtin.command: "{{ docker_compose_path }} --version"
+  register: docker_compose_version_check
+  changed_when: false
+  when: docker_compose_stat.stat.exists
+
+- name: Debug versão do Docker Compose
+  ansible.builtin.debug:
+    var: docker_compose_version_check.stdout
+  when: docker_compose_version_check.stdout is defined
+
+- name: Criar arquivo docker-compose.yml para OwnCloud
+  ansible.builtin.template:
+    src: owncloud-docker-compose.yml.j2
+    dest: "{{ owncloud_project_data_path }}/docker-compose.yml"
+    mode: '0644'
+  tags: [owncloud, docker-compose]
+
+- name: Iniciar containers OwnCloud com Docker Compose V2
+  community.docker.docker_compose_v2:
+    project_src: "{{ owncloud_project_data_path }}" # Pasta onde está o .env e docker-compose.yml
+    state: present # Garante que os serviços estão rodando (equivalente a up -d)
+    remove_orphans: yes # Remove containers órfãos se a definição mudar
+  tags: [owncloud, docker-compose]

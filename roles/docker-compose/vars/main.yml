@@ -1,0 +1,5 @@
+---
+docker_compose_version: "2.17.2" # Versão do Docker Compose do script
+docker_compose_path: "/usr/local/bin/docker-compose"
+docker_compose_download_url_base: "https://github.com/docker/compose/releases/download"
+owncloud_project_data_path: "/data" # Caminho base para .env e docker-compose.yml

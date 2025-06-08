@@ -1,0 +1,14 @@
+---
+- name: Instalar ferramentas de troubleshooting e pacotes essenciais
+  ansible.builtin.apt:
+    name:
+      - net-tools
+      - vim
+      - neofetch
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+  tags: [common, packages]

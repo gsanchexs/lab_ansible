@@ -1,0 +1,2 @@
+---
+# docker_add_user_to_group: "{{ ansible_user }}" # Pode ser definido aqui ou passado pela role

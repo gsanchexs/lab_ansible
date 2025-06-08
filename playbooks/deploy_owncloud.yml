@@ -1,0 +1,52 @@
+---
+- name: Deploy OwnCloud with Docker and Docker Compose
+  hosts: owncloud_servers # Defina este grupo no seu inventário
+  become: yes # Para executar tarefas com sudo
+  gather_facts: yes # Precisamos dos fatos para uname -s e uname -m
+
+  vars_prompt:
+    - name: "db_password"
+      prompt: "Digite a senha do banco de dados (min 12 caracteres)"
+      private: yes
+      confirm: yes
+      validate: '(.{12,})' # Validação simples de comprimento
+    - name: "admin_password"
+      prompt: "Digite a senha do administrador do OwnCloud (min 12 caracteres)"
+      private: yes
+      confirm: yes
+      validate: '(.{12,})' # Validação simples de comprimento
+    - name: "client_dns"
+      prompt: "Digite o DNS do cliente (ex: owncloud.exemplo.com)"
+      private: no
+    - name: "client_ip"
+      prompt: "Digite o IP público do cliente (será adicionado aos trusted_domains)"
+      private: no
+    - name: "owner_email"
+      prompt: "Digite o e-mail do operador (para LetsEncrypt, se usado)"
+      private: no
+
+  roles:
+    - role: common_setup
+    - role: docker
+      vars:
+        docker_add_user_to_group: "{{ ansible_user }}" # Adiciona o usuário que executa o Ansible
+    - role: docker_compose
+      vars:
+        # Passando as variáveis coletadas para a role docker_compose
+        # para que possam ser usadas no template do docker-compose.yml
+        compose_client_dns: "{{ client_dns }}"
+        compose_owner_email: "{{ owner_email }}"
+        # As variáveis do .env serão usadas diretamente pelo docker-compose
+        # a partir do arquivo gerado pela role owncloud
+    - role: owncloud
+      vars:
+        # Passando as variáveis coletadas para a role owncloud
+        owncloud_db_password: "{{ db_password }}"
+        owncloud_admin_password: "{{ admin_password }}"
+        owncloud_client_dns: "{{ client_dns }}"
+        owncloud_client_ip: "{{ client_ip }}"
+
+  post_tasks:
+    - name: Mensagem de Conclusão
+      ansible.builtin.debug:
+        msg: "Deploy do OwnCloud concluído com sucesso! Acesse em http://{{ client_dns }} (ou https se configurado no proxy)."

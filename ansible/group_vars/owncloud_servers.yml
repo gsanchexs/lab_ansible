@@ -1,0 +1,5 @@
+# Exemplo de variáveis que poderiam estar aqui
+# owncloud_data_root: /data
+# owncloud_db_dir: "{{ owncloud_data_root }}/db"
+# owncloud_app_dir: "{{ owncloud_data_root }}/owncloud"
+# docker_compose_version: "2.17.2"

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: owncloud-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${OWNCLOUD_DB_NAME}    # Estas vêm do .env
+      POSTGRES_USER: ${OWNCLOUD_DB_USERNAME} # Estas vêm do .env
+      POSTGRES_PASSWORD: ${OWNCLOUD_DB_PASSWORD} # Estas vêm do .env
+    volumes:
+      - "{{ owncloud_project_data_path }}/db:/var/lib/postgresql/data" # Usar var para caminho base
+    expose:
+      - "5432"
+
+  owncloud:
+    image: owncloud/server:10
+    container_name: owncloud
+    restart: always
+    depends_on:
+      - db
+    env_file: "{{ owncloud_project_data_path }}/.env" # Usar var para caminho base
+    environment:
+      - VIRTUAL_HOST={{ compose_client_dns }}       # Variável passada da role
+      - LETSENCRYPT_HOST={{ compose_client_dns }}  # Variável passada da role
+      - LETSENCRYPT_EMAIL={{ compose_owner_email }}# Variável passada da role
+      - OWNCLOUD_DOMAIN={{ compose_client_dns }}    # Variável passada da role
+    ports:
+      - "8080:8080"
+    volumes:
+      - "{{ owncloud_project_data_path }}/owncloud:/mnt/data" # Usar var para caminho base

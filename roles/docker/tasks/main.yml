@@ -1,0 +1,31 @@
+---
+- name: Verificar se o Docker já está instalado (via get.docker.com script)
+  ansible.builtin.command: docker --version
+  register: docker_check
+  changed_when: false
+  ignore_errors: yes
+
+- name: Instalar Docker usando o script get.docker.com
+  ansible.builtin.shell: "curl -fsSL https://get.docker.com | bash"
+  args:
+    warn: false # Para suprimir avisos sobre o uso de shell para curl | bash
+  when: docker_check.failed
+  notify: Reiniciar Docker Service # Notifica o handler
+  tags: [docker, install]
+
+- name: Garantir que o serviço Docker esteja habilitado e iniciado
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+  tags: [docker, service]
+
+- name: Adicionar usuário ao grupo docker
+  ansible.builtin.user:
+    name: "{{ docker_add_user_to_group | default(ansible_user) }}"
+    groups: docker
+    append: yes
+  when: docker_add_user_to_group is defined
+  tags: [docker, config]
+  # Nota: Uma nova sessão de login pode ser necessária para que a alteração do grupo entre em vigor para o usuário.
+  # Para execuções subsequentes do Ansible via SSH, isso geralmente é resolvido.

@@ -1,0 +1,52 @@
+---
+- name: Criar estrutura de diretórios para OwnCloud
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755' # Ou permissões mais específicas se necessário
+  loop:
+    - "{{ owncloud_project_data_path }}/db"
+    - "{{ owncloud_project_data_path }}/owncloud"
+  tags: [owncloud, directories]
+
+- name: Criar arquivo .env para OwnCloud
+  ansible.builtin.template:
+    src: owncloud.env.j2
+    dest: "{{ owncloud_project_data_path }}/.env"
+    mode: '0600' # Senhas aqui, manter restrito
+  tags: [owncloud, config]
+
+# A task de iniciar o docker-compose está na role docker_compose
+# Esta task aqui deve rodar DEPOIS que o owncloud estiver UP e o config.php existir.
+# Pode ser necessário adicionar um 'wait_for' aqui se o config.php demorar a aparecer.
+
+- name: Esperar pelo arquivo config.php do OwnCloud aparecer (max 5 min)
+  ansible.builtin.wait_for:
+    path: "{{ owncloud_config_file_path }}"
+    state: present
+    timeout: 300 # 5 minutos
+    delay: 10 # Espera 10s antes de checar pela primeira vez
+  tags: [owncloud, config]
+
+- name: Configurar overwritehost e overwriteprotocol no config.php do OwnCloud
+  ansible.builtin.lineinfile:
+    path: "{{ owncloud_config_file_path }}"
+    insertafter: "'overwrite.cli.url' =>.*,"
+    line: "  'overwritehost' => '{{ owncloud_client_dns }}',\n  'overwriteprotocol' => 'http'," # Ou 'https' se o proxy final for SSL
+    regexp: "^\\s*'overwritehost' =>.*,$" # Para garantir idempotência na linha do overwritehost
+    # Para o overwriteprotocol, uma segunda task lineinfile pode ser mais limpa se a primeira não o adicionar corretamente
+  tags: [owncloud, config]
+  # Nota: A idempotência do lineinfile com múltiplas linhas pode ser complexa.
+  # Uma abordagem alternativa seria usar blockinfile ou template para gerenciar o config.php.
+  # Para esta conversão direta do 'sed', o lineinfile é o mais próximo.
+  # A regex acima tenta garantir que 'overwritehost' não seja duplicado.
+  # Você pode precisar de uma segunda task lineinfile para 'overwriteprotocol' se a lógica de inserção for complexa.
+
+- name: Garantir 'overwriteprotocol' no config.php do OwnCloud
+  ansible.builtin.lineinfile:
+    path: "{{ owncloud_config_file_path }}"
+    insertafter: "'overwritehost' => '{{ owncloud_client_dns }}',"
+    line: "  'overwriteprotocol' => 'http',"
+    regexp: "^\\s*'overwriteprotocol' =>.*,$"
+    # Esta task assume que 'overwritehost' já existe e foi configurado corretamente
+  tags: [owncloud, config]
