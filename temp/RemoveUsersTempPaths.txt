@@ -1,0 +1,16 @@
+Write-Output "Remove users temp paths"
+$profilesPath = "C:\Users"
+
+Get-ChildItem -Path $profilesPath -Directory | Where-Object { $_.Name -notin @("Administrador", "Público", "teste", "TS", "Default") } | ForEach-Object {
+    $userProfile = $_.FullName
+    $tempPath = Join-Path -Path $userProfile -ChildPath "AppData\Local\Temp"
+
+    if (Test-Path -Path $tempPath) {
+        Write-Output "Removing on: $tempPath"
+        Get-ChildItem -Path $tempPath -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+    } else {
+        Write-Output "Sem diretório temp no usuário $userProfile"
+    }
+}
+
+Write-Output "Concluído."

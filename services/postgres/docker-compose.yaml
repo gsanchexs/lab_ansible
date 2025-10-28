@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:  
+  db:
+    image: postgres:16
+    container_name: owncloud-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${OWNCLOUD_DB_NAME:-owncloud}
+      POSTGRES_USER: ${OWNCLOUD_DB_USERNAME:-owncloud}
+      POSTGRES_PASSWORD: ${OWNCLOUD_DB_PASSWORD:-password}
+    volumes:
+      - /pg/db:/var/lib/postgresql/data
+    expose:
+      - "5432:5432"
+    networks:
+      - proxy
+    command: |
+      postgres
+      -c shared_buffers=1GB
+      -c effective_cache_size=1GB
+      -c max_connections=200
+      -c wal_level=minimal
+      -c archive_mode=off
+      -c hot_standby=off
+      -c max_wal_senders=0
+      -c max_replication_slots=0
+      -c hot_standby_feedback=on
+      -c wal_compression=on
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: "3G"
+          
+networks:
+  proxy:
+    external: false
